@@ -26,15 +26,17 @@ async function webhook(req,env){
   return new Response('ok');
 }
 
+const num=v=>parseFloat(String(v??'').replace(/[^\d.]/g,''))||0;
 async function sync(env){
-  let url=`https://graph.facebook.com/v21.0/${env.CATALOG_ID}/products?fields=retailer_id,name,price&limit=100&access_token=${env.WA_TOKEN}`,n=0;const d0=today();
+  const f='retailer_id,name,description,price,sale_price,brand,category,availability,image_url,url,currency';
+  let url=`https://graph.facebook.com/v21.0/${env.CATALOG_ID}/products?fields=${f}&limit=100&access_token=${env.WA_TOKEN}`,n=0;const d0=today();
   while(url){
     const d=await(await fetch(url)).json();
     if(d.error)throw new Error(d.error.message);
     const st=[];
     for(const p of d.data||[]){
-      const rate=parseFloat(String(p.price).replace(/[^\d.]/g,''))||0;
-      st.push(env.DB.prepare('INSERT INTO products(id,name,rate,updated_at) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,rate=excluded.rate,updated_at=excluded.updated_at').bind(p.retailer_id,p.name,rate,d0),
+      const mrp=num(p.price),sale=num(p.sale_price),rate=sale>0?sale:mrp; // discount price is used for orders
+      st.push(env.DB.prepare('INSERT INTO products(id,name,description,brand,category,availability,image_url,url,currency,price,sale_price,rate,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,brand=excluded.brand,category=excluded.category,availability=excluded.availability,image_url=excluded.image_url,url=excluded.url,currency=excluded.currency,price=excluded.price,sale_price=excluded.sale_price,rate=excluded.rate,updated_at=excluded.updated_at').bind(p.retailer_id,p.name||'',p.description||'',p.brand||'',p.category||'',p.availability||'',p.image_url||'',p.url||'',p.currency||'',mrp,sale,rate,d0),
               env.DB.prepare('INSERT INTO rate_history(product_id,rate,date) VALUES(?,?,?)').bind(p.retailer_id,rate,d0));
     }
     if(st.length)await env.DB.batch(st);
@@ -43,24 +45,32 @@ async function sync(env){
   return n;
 }
 
-async function deliver(id,env){
+async function deliver(id,env,body){
   const o=await env.DB.prepare('SELECT o.*,r.name rn FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id WHERE o.id=?').bind(id).first();
   if(!o)return J({error:'Order not found'},404);
-  if(o.status==='delivered')return J({error:'Already delivered'},400);
+  if(o.status!=='pending')return J({error:'Order already closed'},400);
   if(!o.retailer_id)return J({error:'Assign a retailer first'},400);
-  const t=await env.DB.prepare('SELECT SUM(qty) q,SUM(qty*rate) a FROM order_items WHERE order_id=?').bind(id).first();
-  const date=today().split('-').reverse().join('-');
-  const amt=Number(t.a).toFixed(2);
+  const it=(await env.DB.prepare('SELECT id,qty,rate FROM order_items WHERE order_id=?').bind(id).all()).results;
+  const want=new Map((body.items||[]).map(i=>[Number(i.id),Number(i.qty)]));
+  let q=0,a=0,full=true;const up=[];
+  for(const i of it){
+    let d=want.has(i.id)?want.get(i.id):i.qty;if(!(d>=0))d=0;d=Math.min(d,i.qty);
+    if(d<i.qty)full=false;q+=d;a+=d*i.rate;
+    up.push(env.DB.prepare('UPDATE order_items SET delivered_qty=? WHERE id=?').bind(d,i.id));
+  }
+  if(q<=0)return J({error:'Enter at least one delivered quantity'},400);
+  const date=today().split('-').reverse().join('-'),amt=a.toFixed(2);
   const url=`https://graph.facebook.com/v21.0/${env.WA_PHONE_ID}/messages`;
   const send=p=>fetch(url,{method:'POST',headers:{authorization:'Bearer '+env.WA_TOKEN,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:o.phone,...p})});
-  // Free text inside the 24h customer-service window, template otherwise
+  // Free text inside the 24h window, approved template otherwise
   const inWindow=Date.now()-new Date(o.created_at.replace(' ','T')+'Z')<23.5*3600*1000;
   let res=null;
-  if(inWindow)res=await send({type:'text',text:{body:`Hello ${o.rn}, your order has been delivered on ${date}.\nTotal items: ${t.q}\nTotal amount: ₹${amt}\nThank you! – Sanchi`}});
-  if(!res||!res.ok)res=await send({type:'template',template:{name:'order_delivered',language:{code:'en'},components:[{type:'body',parameters:[o.rn,date,String(t.q),amt].map(text=>({type:'text',text}))}]}});
+  if(inWindow)res=await send({type:'text',text:{body:`Hello ${o.rn}, your order has been ${full?'delivered':'partially delivered'} on ${date}.\nTotal items: ${q}\nTotal amount: ₹${amt}\nThank you! – Sanchi`}});
+  if(!res||!res.ok)res=await send({type:'template',template:{name:'order_delivered',language:{code:'en'},components:[{type:'body',parameters:[o.rn,date,String(q),amt].map(text=>({type:'text',text}))}]}});
   if(!res.ok)return J({error:'WhatsApp: '+await res.text()},502);
-  await env.DB.prepare("UPDATE orders SET status='delivered',delivered_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
-  return J({ok:true});
+  up.push(env.DB.prepare("UPDATE orders SET status=?,delivered_at=CURRENT_TIMESTAMP WHERE id=?").bind(full?'delivered':'partial',id));
+  await env.DB.batch(up);
+  return J({ok:true,status:full?'delivered':'partial'});
 }
 
 async function savePhones(env,rid,phones){
@@ -76,13 +86,18 @@ async function api(req,env,path){
   if(path==='/login'&&m==='POST'){const b=await req.json();return b.password===env.ADMIN_PASSWORD?J({token:await mkToken(env)}):J({error:'Wrong password'},401)}
   if(!await okToken((req.headers.get('authorization')||'').slice(7),env))return J({error:'Unauthorized'},401);
   if(path==='/orders'&&m==='GET'){
-    const s=new URL(req.url).searchParams.get('status')||'pending';
-    const r=await D.prepare('SELECT o.id,o.status,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT SUM(qty) FROM order_items WHERE order_id=o.id) q,(SELECT SUM(qty*rate) FROM order_items WHERE order_id=o.id) a FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id WHERE o.status=? ORDER BY o.id DESC LIMIT 100').bind(s).all();
-    return J(r.results);
+    const q=new URL(req.url).searchParams,wh=[],bd=[],s=q.get('status')||'all';
+    if(s==='pending')wh.push("o.status='pending'");else if(s==='done')wh.push("o.status!='pending'");
+    const dd="date(COALESCE(o.delivered_at,o.created_at),'+330 minutes')";
+    if(q.get('from')){wh.push(dd+'>=?');bd.push(q.get('from'))}
+    if(q.get('to')){wh.push(dd+'<=?');bd.push(q.get('to'))}
+    if(q.get('retailer')){wh.push('o.retailer_id=?');bd.push(q.get('retailer'))}
+    const r=await D.prepare(`SELECT o.id,o.status,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT json_group_array(json_object('id',id,'name',name,'qty',qty,'dq',delivered_qty,'rate',rate)) FROM order_items WHERE order_id=o.id) items FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id ${wh.length?'WHERE '+wh.join(' AND '):''} ORDER BY o.id DESC LIMIT 500`).bind(...bd).all();
+    return J(r.results.map(o=>({...o,items:JSON.parse(o.items||'[]')})));
   }
   if(x=path.match(/^\/orders\/(\d+)$/)){return J((await D.prepare('SELECT name,qty,rate FROM order_items WHERE order_id=?').bind(x[1]).all()).results)}
   if(x=path.match(/^\/orders\/(\d+)\/assign$/)){const b=await req.json();await D.prepare('UPDATE orders SET retailer_id=? WHERE id=?').bind(b.retailer_id,x[1]).run();return J({ok:1})}
-  if(x=path.match(/^\/orders\/(\d+)\/deliver$/))return deliver(x[1],env);
+  if(x=path.match(/^\/orders\/(\d+)\/deliver$/))return deliver(x[1],env,await req.json().catch(()=>({})));
   if(path==='/retailers'&&m==='GET')return J((await D.prepare("SELECT r.*,(SELECT group_concat(phone,',') FROM retailer_phones WHERE retailer_id=r.id) phones FROM retailers r ORDER BY name").all()).results);
   if(path==='/retailers'&&m==='POST'){const b=await req.json();const r=await D.prepare('INSERT INTO retailers(name,address) VALUES(?,?)').bind(b.name,b.address||'').run();await savePhones(env,r.meta.last_row_id,b.phones);return J({ok:1})}
   if(x=path.match(/^\/retailers\/(\d+)$/)){

@@ -28,15 +28,15 @@ async function webhook(req,env){
 
 const num=v=>parseFloat(String(v??'').replace(/[^\d.]/g,''))||0;
 async function sync(env){
-  const f='retailer_id,name,description,price,sale_price,brand,category,availability,image_url,url,currency';
+  const f='retailer_id,name,description,price,sale_price,brand,category,availability,image_url,url,currency,item_group_id,size,color,material,pattern,gender,age_group';
   let url=`https://graph.facebook.com/v21.0/${env.CATALOG_ID}/products?fields=${f}&limit=100&access_token=${env.WA_TOKEN}`,n=0;const d0=today();
   while(url){
     const d=await(await fetch(url)).json();
     if(d.error)throw new Error(d.error.message);
     const st=[];
     for(const p of d.data||[]){
-      const mrp=num(p.price),sale=num(p.sale_price),rate=sale>0?sale:mrp; // discount price is used for orders
-      st.push(env.DB.prepare('INSERT INTO products(id,name,description,brand,category,availability,image_url,url,currency,price,sale_price,rate,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,brand=excluded.brand,category=excluded.category,availability=excluded.availability,image_url=excluded.image_url,url=excluded.url,currency=excluded.currency,price=excluded.price,sale_price=excluded.sale_price,rate=excluded.rate,updated_at=excluded.updated_at').bind(p.retailer_id,p.name||'',p.description||'',p.brand||'',p.category||'',p.availability||'',p.image_url||'',p.url||'',p.currency||'',mrp,sale,rate,d0),
+      const vr=[p.size,p.color,p.material,p.pattern,p.gender,p.age_group].filter(Boolean).join(' / ');const mrp=num(p.price),sale=num(p.sale_price),rate=sale>0?sale:mrp; // discount price is used for orders
+      st.push(env.DB.prepare('INSERT INTO products(id,name,description,brand,category,availability,image_url,url,currency,item_group_id,variant,price,sale_price,rate,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,brand=excluded.brand,category=excluded.category,availability=excluded.availability,image_url=excluded.image_url,url=excluded.url,currency=excluded.currency,item_group_id=excluded.item_group_id,variant=excluded.variant,price=excluded.price,sale_price=excluded.sale_price,rate=excluded.rate,updated_at=excluded.updated_at').bind(p.retailer_id,p.name||'',p.description||'',p.brand||'',p.category||'',p.availability||'',p.image_url||'',p.url||'',p.currency||'',p.item_group_id||'',vr,mrp,sale,rate,d0),
               env.DB.prepare('INSERT INTO rate_history(product_id,rate,date) VALUES(?,?,?)').bind(p.retailer_id,rate,d0));
     }
     if(st.length)await env.DB.batch(st);
@@ -88,11 +88,11 @@ async function api(req,env,path){
   if(path==='/orders'&&m==='GET'){
     const q=new URL(req.url).searchParams,wh=[],bd=[],s=q.get('status')||'all';
     if(s==='pending')wh.push("o.status='pending'");else if(s==='done')wh.push("o.status!='pending'");
-    const dd="date(COALESCE(o.delivered_at,o.created_at),'+330 minutes')";
+    const dd="date(o.created_at,'+330 minutes','+1 day')"; // delivery date = order date + 1 day
     if(q.get('from')){wh.push(dd+'>=?');bd.push(q.get('from'))}
     if(q.get('to')){wh.push(dd+'<=?');bd.push(q.get('to'))}
     if(q.get('retailer')){wh.push('o.retailer_id=?');bd.push(q.get('retailer'))}
-    const r=await D.prepare(`SELECT o.id,o.status,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT json_group_array(json_object('id',id,'name',name,'qty',qty,'dq',delivered_qty,'rate',rate)) FROM order_items WHERE order_id=o.id) items FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id ${wh.length?'WHERE '+wh.join(' AND '):''} ORDER BY o.id DESC LIMIT 500`).bind(...bd).all();
+    const r=await D.prepare(`SELECT o.id,o.status,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT json_group_array(json_object('id',oi.id,'pid',oi.product_id,'name',oi.name,'variant',COALESCE(p.variant,''),'qty',oi.qty,'dq',oi.delivered_qty,'rate',oi.rate)) FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=o.id) items FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id ${wh.length?'WHERE '+wh.join(' AND '):''} ORDER BY o.id DESC LIMIT 500`).bind(...bd).all();
     return J(r.results.map(o=>({...o,items:JSON.parse(o.items||'[]')})));
   }
   if(x=path.match(/^\/orders\/(\d+)$/)){return J((await D.prepare('SELECT name,qty,rate FROM order_items WHERE order_id=?').bind(x[1]).all()).results)}

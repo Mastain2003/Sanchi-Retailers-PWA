@@ -54,15 +54,16 @@ $('#lg').onclick=()=>{lang=lang==='en'?'hi':'en';localStorage.lang=lang;show()};
 $('#lb').onclick=async()=>{try{tok=(await api('/login','POST',{password:$('#pw').value})).token;localStorage.tok=tok;$('#le').textContent='';show()}catch(e){$('#le').textContent=e.message}};
 async function render(){const v=$('#v');try{await({orders,retailers,products})[tab](v)}catch(e){v.innerHTML='<p>'+esc(e.message)+'</p>'}}
 let F={status:'all',from:'',to:'',retailer:''},RT=[];
-const lb=i=>i.name+(i.variant?' – '+i.variant:'');
+let PV={};
+const lb=i=>{const v=i.variant||PV[i.pid];return i.name+(v?' – '+v:'')};
 const eq=(o,i)=>o.status==='pending'?i.qty:(o.status==='delivered'&&i.dq==null?i.qty:i.dq||0);
 async function orders(v){
- RT=await api('/retailers');
+ RT=await api('/retailers');PV=Object.fromEntries((await api('/products')).map(p=>[p.id,p.variant||'']));
  v.innerHTML=`<div class="card"><div class="fl"><div><label>${t('status')}</label><select id="qs">${['all','pending','done'].map(s=>`<option value="${s}" ${F.status===s?'selected':''}>${t(s)}</option>`).join('')}</select></div><div><label>${t('ret')}</label><select id="qr"><option value="">${t('allr')}</option>${RT.map(r=>`<option value="${r.id}" ${F.retailer==r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div></div><div class="fl"><div><label>${t('from')}</label><input type="date" id="qf" value="${F.from}"></div><div><label>${t('to')}</label><input type="date" id="qt" value="${F.to}"></div></div></div><div id="ol"></div>`;
  const dd=s=>new Date(new Date(s.replace(' ','T')+'Z').getTime()+864e5).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
  const load=async()=>{
   const r=await api('/orders?'+new URLSearchParams(Object.entries(F).filter(e=>e[1])));
-  const kk=i=>i.pid||i.name,NM={};r.forEach(o=>o.items.forEach(i=>NM[kk(i)]=lb(i)));const P=Object.keys(NM).sort((x,y)=>NM[x].localeCompare(NM[y])),pt={},pa={};P.forEach(n=>{pt[n]=0;pa[n]=0});let TA=0;
+  const kk=i=>i.pid||i.name,NM={};r.forEach(o=>o.items.forEach(i=>NM[kk(i)]=lb(i)));const cnt={};Object.values(NM).forEach(l=>cnt[l]=(cnt[l]||0)+1);Object.keys(NM).forEach(k=>{if(cnt[NM[k]]>1)NM[k]+=' ('+k+')'});const P=Object.keys(NM).sort((x,y)=>NM[x].localeCompare(NM[y])),pt={},pa={};P.forEach(n=>{pt[n]=0;pa[n]=0});let TA=0;
   const cell=q=>`<td>${q}</td>`;
   const rows=r.map((o,k)=>{let a=0;const m={};
    o.items.forEach(i=>{const e=eq(o,i),x=m[kk(i)]||(m[kk(i)]=[0,0]);x[0]+=e;x[1]+=e*i.rate;a+=e*i.rate;pt[kk(i)]+=e;pa[kk(i)]+=e*i.rate});TA+=a;

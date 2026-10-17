@@ -11,6 +11,13 @@ const today=()=>new Date(Date.now()+19800000).toISOString().slice(0,10);
 
 async function webhook(req,env){
   const b=await req.json();
+  const RK={accepted:0,sent:1,delivered:2,read:3,failed:4};
+  for(const e of b.entry||[])for(const c of e.changes||[])for(const s of c.value?.statuses||[]){
+    const cur=await env.DB.prepare('SELECT wa_status FROM orders WHERE wa_out_id=?').bind(s.id).first();
+    if(!cur||(RK[s.status]??0)<(RK[cur.wa_status]??0))continue;
+    const er=(s.errors||[]).map(x=>`${x.code} ${x.title||''} ${x.error_data?.details||x.message||''}`.trim()).join('; ')||null;
+    await env.DB.prepare('UPDATE orders SET wa_status=?,wa_error=? WHERE wa_out_id=?').bind(s.status,er,s.id).run();
+  }
   for(const e of b.entry||[])for(const c of e.changes||[])for(const m of c.value?.messages||[]){
     if(m.type!=='order')continue;
     const r=await env.DB.prepare('SELECT retailer_id FROM retailer_phones WHERE substr(phone,-10)=?').bind(l10(m.from)).first();
@@ -28,14 +35,14 @@ async function webhook(req,env){
 
 const num=v=>parseFloat(String(v??'').replace(/[^\d.]/g,''))||0;
 async function sync(env){
-  const f='retailer_id,name,description,price,sale_price,brand,category,availability,image_url,url,currency,item_group_id,size,color,material,pattern,gender,age_group';
+  const f='retailer_id,name,description,price,sale_price,brand,category,availability,image_url,url,currency,item_group_id,size,color,material,pattern,gender,age_group,additional_variant_attributes';
   let url=`https://graph.facebook.com/v21.0/${env.CATALOG_ID}/products?fields=${f}&limit=100&access_token=${env.WA_TOKEN}`,n=0;const d0=today();
   while(url){
     const d=await(await fetch(url)).json();
     if(d.error)throw new Error(d.error.message);
     const st=[];
     for(const p of d.data||[]){
-      const vr=[p.size,p.color,p.material,p.pattern,p.gender,p.age_group].filter(Boolean).join(' / ');const mrp=num(p.price),sale=num(p.sale_price),rate=sale>0?sale:mrp; // discount price is used for orders
+      const av=p.additional_variant_attributes,ex=Array.isArray(av)?av.map(a=>a.value??a.variant_value??Object.values(a)[0]):av&&typeof av==='object'?Object.values(av):[];const vr=[...new Set([p.size,...ex,p.color,p.material,p.pattern,p.gender,p.age_group].filter(Boolean).map(String))].join(' / ');const mrp=num(p.price),sale=num(p.sale_price),rate=sale>0?sale:mrp; // discount price is used for orders
       st.push(env.DB.prepare('INSERT INTO products(id,name,description,brand,category,availability,image_url,url,currency,item_group_id,variant,price,sale_price,rate,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,brand=excluded.brand,category=excluded.category,availability=excluded.availability,image_url=excluded.image_url,url=excluded.url,currency=excluded.currency,item_group_id=excluded.item_group_id,variant=excluded.variant,price=excluded.price,sale_price=excluded.sale_price,rate=excluded.rate,updated_at=excluded.updated_at').bind(p.retailer_id,p.name||'',p.description||'',p.brand||'',p.category||'',p.availability||'',p.image_url||'',p.url||'',p.currency||'',p.item_group_id||'',vr,mrp,sale,rate,d0),
               env.DB.prepare('INSERT INTO rate_history(product_id,rate,date) VALUES(?,?,?)').bind(p.retailer_id,rate,d0));
     }
@@ -68,7 +75,8 @@ async function deliver(id,env,body){
   if(inWindow)res=await send({type:'text',text:{body:`Hello ${o.rn}, your order has been ${full?'delivered':'partially delivered'} on ${date}.\nTotal items: ${q}\nTotal amount: ₹${amt}\nThank you! – Sanchi`}});
   if(!res||!res.ok)res=await send({type:'template',template:{name:'order_delivered',language:{code:'en'},components:[{type:'body',parameters:[o.rn,date,String(q),amt].map(text=>({type:'text',text}))}]}});
   if(!res.ok)return J({error:'WhatsApp: '+await res.text()},502);
-  up.push(env.DB.prepare("UPDATE orders SET status=?,delivered_at=CURRENT_TIMESTAMP WHERE id=?").bind(full?'delivered':'partial',id));
+  const wj=await res.json().catch(()=>({})),wid=wj.messages?.[0]?.id||null;
+  up.push(env.DB.prepare("UPDATE orders SET status=?,delivered_at=CURRENT_TIMESTAMP,wa_out_id=?,wa_status='accepted',wa_error=NULL WHERE id=?").bind(full?'delivered':'partial',wid,id));
   await env.DB.batch(up);
   return J({ok:true,status:full?'delivered':'partial'});
 }
@@ -92,7 +100,7 @@ async function api(req,env,path){
     if(q.get('from')){wh.push(dd+'>=?');bd.push(q.get('from'))}
     if(q.get('to')){wh.push(dd+'<=?');bd.push(q.get('to'))}
     if(q.get('retailer')){wh.push('o.retailer_id=?');bd.push(q.get('retailer'))}
-    const r=await D.prepare(`SELECT o.id,o.status,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT json_group_array(json_object('id',oi.id,'pid',oi.product_id,'name',oi.name,'variant',COALESCE(p.variant,''),'qty',oi.qty,'dq',oi.delivered_qty,'rate',oi.rate)) FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=o.id) items FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id ${wh.length?'WHERE '+wh.join(' AND '):''} ORDER BY o.id DESC LIMIT 500`).bind(...bd).all();
+    const r=await D.prepare(`SELECT o.id,o.status,o.wa_status,o.wa_error,o.created_at,o.delivered_at,o.phone,o.retailer_id,r.name rn,(SELECT json_group_array(json_object('id',oi.id,'pid',oi.product_id,'name',oi.name,'variant',COALESCE(p.variant,''),'qty',oi.qty,'dq',oi.delivered_qty,'rate',oi.rate)) FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=o.id) items FROM orders o LEFT JOIN retailers r ON r.id=o.retailer_id ${wh.length?'WHERE '+wh.join(' AND '):''} ORDER BY o.id DESC LIMIT 500`).bind(...bd).all();
     return J(r.results.map(o=>({...o,items:JSON.parse(o.items||'[]')})));
   }
   if(x=path.match(/^\/orders\/(\d+)$/)){return J((await D.prepare('SELECT name,qty,rate FROM order_items WHERE order_id=?').bind(x[1]).all()).results)}

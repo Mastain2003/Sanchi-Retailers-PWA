@@ -82,6 +82,6 @@ async function products(v){
  const p=await api('/products');
  v.innerHTML=`<button class="btn" id="sy" style="width:100%;margin-bottom:12px">${t('sync')}</button>`+(p.length?p.map(x=>`<div class="card row"><div><b>${esc(x.name)}</b><div class="mut">${esc(x.id)} · ${t('upd')}: ${esc(x.updated_at)}</div></div><b>${money(x.rate)}</b></div>`).join(''):`<p class="mut">${t('nopro')}</p>`);
  $('#sy').onclick=async e=>{e.target.disabled=true;try{const r=await api('/sync','POST');toast(t('synced')+r.synced);render()}catch(err){toast(err.message);e.target.disabled=false}}}
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+//if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 show();
 </script></body></html>

@@ -1,5 +1,5 @@
 name = "sanchi-retailers-api"
-main = "worker.js"
+main = "worker/worker.js"
 compatibility_date = "2026-10-01"
 
 [[d1_databases]]

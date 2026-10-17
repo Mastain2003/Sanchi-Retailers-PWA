@@ -50,9 +50,14 @@ async function deliver(id,env){
   if(!o.retailer_id)return J({error:'Assign a retailer first'},400);
   const t=await env.DB.prepare('SELECT SUM(qty) q,SUM(qty*rate) a FROM order_items WHERE order_id=?').bind(id).first();
   const date=today().split('-').reverse().join('-');
-  const res=await fetch(`https://graph.facebook.com/v21.0/${env.WA_PHONE_ID}/messages`,{method:'POST',headers:{authorization:'Bearer '+env.WA_TOKEN,'content-type':'application/json'},
-    body:JSON.stringify({messaging_product:'whatsapp',to:o.phone,type:'template',template:{name:'order_delivered',language:{code:'en'},
-      components:[{type:'body',parameters:[o.rn,date,String(t.q),Number(t.a).toFixed(2)].map(text=>({type:'text',text}))}]}})});
+  const amt=Number(t.a).toFixed(2);
+  const url=`https://graph.facebook.com/v21.0/${env.WA_PHONE_ID}/messages`;
+  const send=p=>fetch(url,{method:'POST',headers:{authorization:'Bearer '+env.WA_TOKEN,'content-type':'application/json'},body:JSON.stringify({messaging_product:'whatsapp',to:o.phone,...p})});
+  // Free text inside the 24h customer-service window, template otherwise
+  const inWindow=Date.now()-new Date(o.created_at.replace(' ','T')+'Z')<23.5*3600*1000;
+  let res=null;
+  if(inWindow)res=await send({type:'text',text:{body:`Hello ${o.rn}, your order has been delivered on ${date}.\nTotal items: ${t.q}\nTotal amount: ₹${amt}\nThank you! – Sanchi`}});
+  if(!res||!res.ok)res=await send({type:'template',template:{name:'order_delivered',language:{code:'en'},components:[{type:'body',parameters:[o.rn,date,String(t.q),amt].map(text=>({type:'text',text}))}]}});
   if(!res.ok)return J({error:'WhatsApp: '+await res.text()},502);
   await env.DB.prepare("UPDATE orders SET status='delivered',delivered_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
   return J({ok:true});

@@ -10,7 +10,7 @@
 header{background:var(--b);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));border-bottom:4px solid var(--c);position:sticky;top:0;z-index:5}
 header img{width:38px;height:38px;border-radius:50%;background:#fff}header b{flex:1;font-size:15px;line-height:1.2}
 header button{background:none;border:1px solid #fff8;color:#fff;border-radius:6px;padding:4px 9px}
-main{padding:12px;padding-bottom:84px;max-width:640px;margin:auto}
+main{padding:12px;padding-bottom:84px;max-width:900px;margin:auto}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;border:0;background:none;padding:13px 0;color:var(--mut);font-weight:600;border-top:3px solid transparent}
 nav button.on{color:var(--b);border-top-color:var(--c)}
@@ -22,19 +22,20 @@ input,textarea,select{width:100%;padding:10px;border:1px solid var(--ln);border-
 label{font-weight:600;font-size:13px}.tag{background:#e3f6fd;color:#0a6e96;border-radius:5px;padding:1px 7px;font-size:12px}.warn{background:#fff3d6;color:#8a5a00}
 #m{position:fixed;inset:0;background:#0007;display:none;align-items:flex-end;z-index:10}#m>div{background:#fff;width:100%;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;max-width:640px;margin:auto}
 table{width:100%;border-collapse:collapse}td,th{padding:6px 2px;border-bottom:1px solid var(--ln);text-align:left}td:last-child,th:last-child{text-align:right}
+.tw{overflow-x:auto}.big td,.big th{padding:6px 8px;white-space:nowrap;text-align:left;vertical-align:top}.o td:nth-child(n+5),.o th:nth-child(n+5){text-align:right}.o td:nth-child(4){white-space:normal;min-width:210px}.tt td{font-weight:700;background:#e3f6fd}.fl{display:flex;gap:8px}.fl>div{flex:1}
 #login{max-width:340px;margin:12vh auto;text-align:center;padding:16px}#login img{width:120px;border-radius:50%}
 #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;display:none;z-index:20}
 </style></head><body>
-<div id="login"><img src="icon-192.png" alt=""><h2 id="lt"></h2><input id="pw" type="password" value="GoTo@36Sanchi" autocomplete="current-password"><button class="btn" id="lb" style="width:100%"></button><p id="le" style="color:#c62828"></p></div>
+<div id="login"><img src="icon-192.png" alt=""><h2 id="lt"></h2><input id="pw" type="password" autocomplete="current-password"><button class="btn" id="lb" style="width:100%"></button><p id="le" style="color:#c62828"></p></div>
 <div id="app" hidden>
 <header><img src="icon-192.png" alt=""><b id="co"></b><button id="lg">हिं</button><button id="lo">⎋</button></header>
 <main id="v"></main>
 <nav><button data-t="orders"></button><button data-t="retailers"></button><button data-t="products"></button></nav></div>
 <div id="m"><div id="mc"></div></div><div id="toast"></div>
 <script>
-const API='https://sanchi-retailers-api.prakharmastain9.workers.dev'; // <- put your Worker URL here
-const L={en:{co:'Sanchi – Ujjain Sahakari Dugdh Sangh Maryadit',pw:'Admin password',login:'Log in',orders:'Orders',retailers:'Retailers',products:'Products',pending:'Pending',delivered:'Delivered',unk:'Unknown retailer',assign:'Assign retailer',pick:'Select retailer',deliver:'Mark delivered & send WhatsApp',conf:'Mark this order delivered and message the retailer?',done:'Delivered and message sent',items:'Items',amt:'Amount',total:'Total',add:'Add retailer',edit:'Edit',del:'Delete',delq:'Delete this retailer?',name:'Name',addr:'Address',phones:'WhatsApp numbers (one per line, with country code)',save:'Save',close:'Close',sync:'Sync rates now',synced:'Products synced: ',noord:'No orders yet.',noret:'No retailers yet. Add one to match incoming orders.',nopro:'No products yet. Tap Sync rates now.',rate:'Rate',upd:'Updated',saved:'Saved',qty:'Qty'},
-hi:{co:'सांची – उज्जैन सहकारी दुग्ध संघ मर्यादित',pw:'एडमिन पासवर्ड',login:'लॉगिन',orders:'ऑर्डर',retailers:'रिटेलर',products:'उत्पाद',pending:'लंबित',delivered:'डिलीवर हुए',unk:'अज्ञात रिटेलर',assign:'रिटेलर चुनें',pick:'रिटेलर चुनें',deliver:'डिलीवर करें और WhatsApp भेजें',conf:'ऑर्डर डिलीवर मार्क करें और रिटेलर को संदेश भेजें?',done:'डिलीवर हुआ, संदेश भेजा गया',items:'आइटम',amt:'राशि',total:'कुल',add:'रिटेलर जोड़ें',edit:'बदलें',del:'हटाएं',delq:'यह रिटेलर हटाएं?',name:'नाम',addr:'पता',phones:'WhatsApp नंबर (हर लाइन में एक, देश कोड सहित)',save:'सेव करें',close:'बंद करें',sync:'रेट अभी सिंक करें',synced:'उत्पाद सिंक हुए: ',noord:'अभी कोई ऑर्डर नहीं।',noret:'कोई रिटेलर नहीं। ऑर्डर मिलाने के लिए जोड़ें।',nopro:'कोई उत्पाद नहीं। रेट सिंक करें दबाएं।',rate:'रेट',upd:'अपडेट',saved:'सेव हुआ',qty:'मात्रा'}};
+const API='https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev'; // <- put your Worker URL here
+const L={en:{co:'Sanchi – Ujjain Sahakari Dugdh Sangh Maryadit',pw:'Admin password',login:'Log in',orders:'Orders',retailers:'Retailers',products:'Products',pending:'Pending',delivered:'Delivered',unk:'Unknown retailer',assign:'Assign retailer',pick:'Select retailer',deliver:'Mark delivered & send WhatsApp',conf:'Mark this order delivered and message the retailer?',done:'Delivered and message sent',items:'Items',amt:'Amount',total:'Total',add:'Add retailer',edit:'Edit',del:'Delete',delq:'Delete this retailer?',name:'Name',addr:'Address',phones:'WhatsApp numbers (one per line, with country code)',save:'Save',close:'Close',sync:'Sync rates now',synced:'Products synced: ',noord:'No orders yet.',noret:'No retailers yet. Add one to match incoming orders.',nopro:'No products yet. Tap Sync rates now.',rate:'Rate',upd:'Updated',saved:'Saved',qty:'Qty',status:'Status',all:'All',done:'Completed',partial:'Partial',from:'From',to:'To',ret:'Retailer',allr:'All retailers',order:'Order',date:'Date',markp:'Mark partially delivered & send WhatsApp',dq:'Delivered qty',oq:'Ordered',mrp:'MRP',sale:'Sale price',used:'Rate used',brand:'Brand',cat:'Category',desc:'Description',avail:'Availability',img:'Image',id:'ID'},
+hi:{co:'सांची – उज्जैन सहकारी दुग्ध संघ मर्यादित',pw:'एडमिन पासवर्ड',login:'लॉगिन',orders:'ऑर्डर',retailers:'रिटेलर',products:'उत्पाद',pending:'लंबित',delivered:'डिलीवर हुए',unk:'अज्ञात रिटेलर',assign:'रिटेलर चुनें',pick:'रिटेलर चुनें',deliver:'डिलीवर करें और WhatsApp भेजें',conf:'ऑर्डर डिलीवर मार्क करें और रिटेलर को संदेश भेजें?',done:'डिलीवर हुआ, संदेश भेजा गया',items:'आइटम',amt:'राशि',total:'कुल',add:'रिटेलर जोड़ें',edit:'बदलें',del:'हटाएं',delq:'यह रिटेलर हटाएं?',name:'नाम',addr:'पता',phones:'WhatsApp नंबर (हर लाइन में एक, देश कोड सहित)',save:'सेव करें',close:'बंद करें',sync:'रेट अभी सिंक करें',synced:'उत्पाद सिंक हुए: ',noord:'अभी कोई ऑर्डर नहीं।',noret:'कोई रिटेलर नहीं। ऑर्डर मिलाने के लिए जोड़ें।',nopro:'कोई उत्पाद नहीं। रेट सिंक करें दबाएं।',rate:'रेट',upd:'अपडेट',saved:'सेव हुआ',qty:'मात्रा',status:'स्थिति',all:'सभी',done:'पूर्ण',partial:'आंशिक',from:'से',to:'तक',ret:'रिटेलर',allr:'सभी रिटेलर',order:'ऑर्डर',date:'तारीख',markp:'आंशिक डिलीवर करें और WhatsApp भेजें',dq:'डिलीवर मात्रा',oq:'ऑर्डर',mrp:'MRP',sale:'सेल मूल्य',used:'उपयोग रेट',brand:'ब्रांड',cat:'श्रेणी',desc:'विवरण',avail:'उपलब्धता',img:'चित्र',id:'आईडी'}};
 let lang=localStorage.lang||'en',tok=localStorage.tok,tab='orders',st='pending';
 const t=k=>L[lang][k]||k,$=s=>document.querySelector(s),money=x=>'₹'+Number(x||0).toFixed(2);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,22 +53,37 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.
 $('#lg').onclick=()=>{lang=lang==='en'?'hi':'en';localStorage.lang=lang;show()};$('#lo').onclick=out;
 $('#lb').onclick=async()=>{try{tok=(await api('/login','POST',{password:$('#pw').value})).token;localStorage.tok=tok;$('#le').textContent='';show()}catch(e){$('#le').textContent=e.message}};
 async function render(){const v=$('#v');try{await({orders,retailers,products})[tab](v)}catch(e){v.innerHTML='<p>'+esc(e.message)+'</p>'}}
+let F={status:'all',from:'',to:'',retailer:''},RT=[];
+const eq=(o,i)=>o.status==='pending'?i.qty:(o.status==='delivered'&&i.dq==null?i.qty:i.dq||0);
 async function orders(v){
- v.innerHTML=`<div class="tabs"><button class="${st==='pending'?'on':''}" data-s="pending">${t('pending')}</button><button class="${st==='delivered'?'on':''}" data-s="delivered">${t('delivered')}</button></div><div id="ol"></div>`;
- v.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{st=b.dataset.s;render()});
- const r=await api('/orders?status='+st);
- $('#ol').innerHTML=r.length?r.map(o=>`<div class="card" data-id="${o.id}"><div class="row"><b>#${o.id} ${o.rn?esc(o.rn):`<span class="tag warn">${t('unk')}</span>`}</b><b>${money(o.a)}</b></div><div class="row mut"><span>${dt(o.delivered_at||o.created_at)}</span><span>${t('items')}: ${o.q||0}</span></div></div>`).join(''):`<p class="mut">${t('noord')}</p>`;
- document.querySelectorAll('.card[data-id]').forEach(c=>c.onclick=()=>detail(r.find(o=>o.id==c.dataset.id)))}
-async function detail(o){
- const it=await api('/orders/'+o.id),rt=o.retailer_id?[]:await api('/retailers');
- modal(`<h3>#${o.id} ${o.rn?esc(o.rn):t('unk')}</h3><p class="mut">+${esc(o.phone)} · ${dt(o.created_at)}</p>
- <table><tr><th>${t('items')}</th><th>${t('qty')}</th><th>${t('rate')}</th><th>${t('amt')}</th></tr>${it.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${money(i.rate)}</td><td>${money(i.qty*i.rate)}</td></tr>`).join('')}
- <tr><th>${t('total')}</th><th>${o.q||0}</th><th></th><th>${money(o.a)}</th></tr></table><br>
- ${!o.retailer_id?`<label>${t('assign')}</label><select id="as"><option value="">${t('pick')}</option>${rt.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select><button class="btn s" id="asb" style="width:100%">${t('save')}</button><br><br>`:''}
- ${o.status==='pending'&&o.retailer_id?`<button class="btn" id="dv" style="width:100%">${t('deliver')}</button><br><br>`:''}
+ RT=await api('/retailers');
+ v.innerHTML=`<div class="card"><div class="fl"><div><label>${t('status')}</label><select id="qs">${['all','pending','done'].map(s=>`<option value="${s}" ${F.status===s?'selected':''}>${t(s)}</option>`).join('')}</select></div><div><label>${t('ret')}</label><select id="qr"><option value="">${t('allr')}</option>${RT.map(r=>`<option value="${r.id}" ${F.retailer==r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div></div><div class="fl"><div><label>${t('from')}</label><input type="date" id="qf" value="${F.from}"></div><div><label>${t('to')}</label><input type="date" id="qt" value="${F.to}"></div></div></div><div id="ol"></div>`;
+ const load=async()=>{
+  const r=await api('/orders?'+new URLSearchParams(Object.entries(F).filter(e=>e[1])));let TQ=0,TA=0;
+  const rows=r.map(o=>{let q=0,a=0;const ls=o.items.map(i=>{const e=eq(o,i);q+=e;a+=e*i.rate;return `${esc(i.name)}: ${e}${e!==i.qty?'/'+i.qty:''} × ${money(i.rate)} = ${money(e*i.rate)}`}).join('<br>');TQ+=q;TA+=a;
+   return `<tr data-id="${o.id}"><td>#${o.id}<br><span class="tag ${o.status==='pending'?'warn':''}">${t(o.status)}</span></td><td>${dt(o.delivered_at||o.created_at)}</td><td>${o.rn?esc(o.rn):`<span class="tag warn">${t('unk')}</span>`}</td><td>${ls}</td><td>${q}</td><td>${money(a)}</td></tr>`}).join('');
+  $('#ol').innerHTML=r.length?`<div class="tw"><table class="big o"><tr><th>${t('order')}</th><th>${t('date')}</th><th>${t('ret')}</th><th>${t('items')}</th><th>${t('qty')}</th><th>${t('amt')}</th></tr>${rows}<tr class="tt"><td colspan="4">${t('total')} (${r.length})</td><td>${TQ}</td><td>${money(TA)}</td></tr></table></div>`:`<p class="mut">${t('noord')}</p>`;
+  document.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>detail(r.find(o=>o.id==tr.dataset.id)));
+ };
+ [['qs','status'],['qr','retailer'],['qf','from'],['qt','to']].forEach(([i,k])=>$('#'+i).onchange=e=>{F[k]=e.target.value;load()});
+ await load()}
+function detail(o){
+ const pend=o.status==='pending',ed=pend&&o.retailer_id;
+ modal(`<h3>#${o.id} ${o.rn?esc(o.rn):t('unk')} <span class="tag">${t(o.status)}</span></h3><p class="mut">+${esc(o.phone)} · ${dt(o.created_at)}</p>
+ <table><tr><th>${t('items')}</th><th>${t('oq')}</th><th>${t('rate')}</th><th>${t('dq')}</th></tr>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td>${money(i.rate)}</td><td>${ed?`<input class="dq" type="number" min="0" max="${i.qty}" step="any" data-id="${i.id}" data-q="${i.qty}" value="${i.qty}" style="width:76px;margin:0">`:pend?'-':eq(o,i)}</td></tr>`).join('')}</table>
+ <p class="row"><b>${t('total')}</b><b id="dt_"></b></p>
+ ${pend&&!o.retailer_id?`<label>${t('assign')}</label><select id="as"><option value="">${t('pick')}</option>${RT.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select><button class="btn s" id="asb" style="width:100%">${t('save')}</button><br><br>`:''}
+ ${ed?`<button class="btn" id="dv" style="width:100%"></button><br><br>`:''}
  <button class="btn s" style="width:100%" onclick="closeM()">${t('close')}</button>`);
+ const calc=()=>{let q=0,a=0,full=true;
+  if(ed)document.querySelectorAll('.dq').forEach(e=>{const m=+e.dataset.q,v=Math.min(Math.max(+e.value||0,0),m);if(v<m)full=false;q+=v;a+=v*o.items.find(i=>i.id==e.dataset.id).rate});
+  else o.items.forEach(i=>{const e=eq(o,i);q+=e;a+=e*i.rate});
+  $('#dt_').textContent=q+' · '+money(a);if($('#dv'))$('#dv').textContent=t(full?'deliver':'markp')};
+ document.querySelectorAll('.dq').forEach(e=>e.oninput=calc);calc();
  const a=$('#asb');if(a)a.onclick=async()=>{if(!$('#as').value)return;await api(`/orders/${o.id}/assign`,'POST',{retailer_id:$('#as').value});closeM();toast(t('saved'));render()};
- const d=$('#dv');if(d)d.onclick=async()=>{if(!confirm(t('conf')))return;d.disabled=true;try{await api(`/orders/${o.id}/deliver`,'POST');closeM();toast(t('done'));render()}catch(e){d.disabled=false;toast(e.message)}}}
+ const d=$('#dv');if(d)d.onclick=async()=>{if(!confirm(t('conf')))return;d.disabled=true;
+  const items=[...document.querySelectorAll('.dq')].map(e=>({id:+e.dataset.id,qty:Math.min(Math.max(+e.value||0,0),+e.dataset.q)}));
+  try{await api(`/orders/${o.id}/deliver`,'POST',{items});closeM();toast(t('done'));render()}catch(e){d.disabled=false;toast(e.message)}}}
 async function retailers(v){
  const r=await api('/retailers');
  v.innerHTML=`<button class="btn" id="ad" style="width:100%;margin-bottom:12px">+ ${t('add')}</button>`+(r.length?r.map(x=>`<div class="card" data-r="${x.id}"><b>${esc(x.name)}</b><div class="mut">${esc(x.address)}</div><div class="mut">${(x.phones||'').split(',').filter(Boolean).map(p=>'+'+esc(p)).join(' · ')}</div></div>`).join(''):`<p class="mut">${t('noret')}</p>`);
@@ -79,9 +95,9 @@ function form(x={}){
   try{await api(x.id?'/retailers/'+x.id:'/retailers',x.id?'PUT':'POST',b);closeM();toast(t('saved'));render()}catch(e){toast(e.message)}};
  const d=$('#fd');if(d)d.onclick=async()=>{if(confirm(t('delq'))){await api('/retailers/'+x.id,'DELETE');closeM();render()}}}
 async function products(v){
- const p=await api('/products');
- v.innerHTML=`<button class="btn" id="sy" style="width:100%;margin-bottom:12px">${t('sync')}</button>`+(p.length?p.map(x=>`<div class="card row"><div><b>${esc(x.name)}</b><div class="mut">${esc(x.id)} · ${t('upd')}: ${esc(x.updated_at)}</div></div><b>${money(x.rate)}</b></div>`).join(''):`<p class="mut">${t('nopro')}</p>`);
+ const p=await api('/products'),K=['img','id','name','brand','cat','desc','mrp','sale','used','avail','upd'];
+ v.innerHTML=`<button class="btn" id="sy" style="width:100%;margin-bottom:12px">${t('sync')}</button>`+(p.length?`<div class="tw"><table class="big"><tr>${K.map(k=>`<th>${t(k)}</th>`).join('')}</tr>${p.map(x=>`<tr><td>${x.image_url?`<img src="${esc(x.image_url)}" width="40" height="40" style="object-fit:cover;border-radius:6px" alt="">`:''}</td><td>${esc(x.id)}</td><td>${esc(x.name)}</td><td>${esc(x.brand)}</td><td>${esc(x.category)}</td><td style="white-space:normal;min-width:200px;max-width:260px">${esc(x.description)}</td><td>${x.price?money(x.price):'-'}</td><td>${x.sale_price?money(x.sale_price):'-'}</td><td><b>${money(x.rate)}</b></td><td>${esc(x.availability)}</td><td>${esc(x.updated_at)}</td></tr>`).join('')}</table></div>`:`<p class="mut">${t('nopro')}</p>`);
  $('#sy').onclick=async e=>{e.target.disabled=true;try{const r=await api('/sync','POST');toast(t('synced')+r.synced);render()}catch(err){toast(err.message);e.target.disabled=false}}}
-//if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(r=>r.forEach(x=>x.unregister()));caches.keys().then(k=>k.forEach(x=>caches.delete(x)))} // service worker disabled for testing
 show();
 </script></body></html>

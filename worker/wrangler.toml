@@ -1,3 +1,4 @@
+
 name = "sanchi-retailers-api"
 main = "worker.js"
 compatibility_date = "2026-10-01"
@@ -5,7 +6,7 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "sanchi-retailers-db"
-database_id = "caade0e3-ddec-476c-bca6-ae7b76f74960"
+database_id = "YOUR_ACTUAL_D1_DATABASE_ID"
 
 [triggers]
-crons = ["30 18 * * *"]  # 12:00 AM IST daily
+crons = ["30 18 * * *"]

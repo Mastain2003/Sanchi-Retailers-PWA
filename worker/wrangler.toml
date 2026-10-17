@@ -1,6 +1,6 @@
 name = "sanchi-retailers-api"
 main = "worker.js"
-compatibility_date = "2027-11-01"
+compatibility_date = "2026-10-01"
 
 [[d1_databases]]
 binding = "DB"

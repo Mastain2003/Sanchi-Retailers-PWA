@@ -6,7 +6,7 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "sanchi-retailers-db"
-database_id = "YOUR_ACTUAL_D1_DATABASE_ID"
+database_id = "caade0e3-ddec-476c-bca6-ae7b76f74960"
 
 [triggers]
 crons = ["30 18 * * *"]
